@@ -1,0 +1,6 @@
+Flask==2.3.2
+Werkzeug==2.3.7
+opencv-python>=4.9.0
+numpy>=1.26.0
+flask-cors
+Pillow>=10.0.0
