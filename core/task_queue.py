@@ -223,6 +223,12 @@ class TaskQueueManager:
                 last_heartbeat=datetime.utcnow().isoformat()
             )
             
+            # 重新获取最新的任务数据（可能在队列等待期间被更新）
+            task = self.storage.get_task(task_id)
+            if not task:
+                logger.error(f"Task {task_id} not found after status update")
+                return
+            
             task_type = task.get("task_type")
             if task_type not in self.task_executors:
                 raise ValueError(f"No executor registered for task type: {task_type}")
@@ -286,8 +292,8 @@ class TaskQueueManager:
                         raise ValueError(f"Invalid '{key}' value in region {i}")
         
         elif task_type == "video_merge":
-            input_files = task_config.get("input_files", [])
-            if len(input_files) < 2:
+            files = task_config.get("files", [])
+            if len(files) < 2:
                 raise ValueError("Video merge requires at least 2 input files")
     
     def _create_progress_callback(self, task_id: str) -> Callable:

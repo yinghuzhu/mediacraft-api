@@ -111,7 +111,9 @@ def upload_task_file(task_id):
             return jsonify({'error': 'Task not found'}), 404
         
         # 验证任务所有权
+        logger.info(f"Task upload - Task SID: {task.get('sid')}, Current SID: {sid}")
         if task.get('sid') != sid:
+            logger.error(f"Access denied - Task belongs to {task.get('sid')}, current user is {sid}")
             return jsonify({'error': 'Access denied'}), 403
         
         # 检查任务状态
@@ -634,7 +636,7 @@ def update_task(task_id):
                 }
                 
                 # 直接将任务添加到队列，不生成新ID
-                with current_app.task_queue_manager._lock:
+                with current_app.task_queue_manager._task_lock:
                     if len(current_app.task_queue_manager.active_tasks) < current_app.task_queue_manager.max_concurrent:
                         current_app.task_queue_manager._start_task_immediately(task_id)
                     else:

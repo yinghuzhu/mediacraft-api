@@ -88,7 +88,7 @@ class SessionManager:
         """获取或创建会话"""
         try:
             # 从Cookie中获取SID
-            sid = request.cookies.get('sid')
+            sid = request.cookies.get('session_id')
             
             # 验证现有会话
             if sid and self.validate_session(sid):
@@ -227,7 +227,7 @@ def create_session_middleware(session_manager: SessionManager):
             # 设置会话Cookie
             if hasattr(g, 'sid') and g.sid:
                 response.set_cookie(
-                    'sid', 
+                    'session_id', 
                     g.sid,
                     max_age=30 * 24 * 60 * 60,  # 30天
                     httponly=True,

@@ -38,6 +38,7 @@ data/temp/*
 !data/uploads/.gitkeep
 !data/results/.gitkeep
 !data/temp/.gitkeep
+data/
 
 # Logs
 *.log

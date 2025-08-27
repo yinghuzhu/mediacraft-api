@@ -30,17 +30,47 @@ class VideoMerger:
         try:
             # 获取输入文件列表
             config = task.get('task_config', {})
-            # 支持两种数据格式：新格式使用files，旧格式使用input_files
-            files_data = config.get('files', [])
-            if files_data:
-                # 新格式：从files数组中提取path
-                input_files = [f.get('path') for f in files_data if f.get('path')]
-            else:
-                # 旧格式：直接使用input_files
-                input_files = config.get('input_files', [])
             
+            # 支持多种数据格式
+            files_data = []
+            input_files = []
+            
+            # 1. 检查segments格式（前端发送的格式）
+            segments = config.get('segments', [])
+            if segments:
+                # 从任务中获取上传的文件信息
+                task_files = task.get('files', [])
+                for segment in segments:
+                    filename = segment.get('filename')
+                    # 根据文件名找到对应的文件路径
+                    for task_file in task_files:
+                        if task_file.get('original_filename') == filename:
+                            file_info = {
+                                'path': task_file.get('file_path'),
+                                'start_time': segment.get('startTime', 0),
+                                'end_time': segment.get('endTime'),
+                                'duration': task_file.get('duration', 0)
+                            }
+                            files_data.append(file_info)
+                            input_files.append(task_file.get('file_path'))
+                            break
+            
+            # 2. 检查files格式（新格式）
+            elif config.get('files'):
+                files_data = config.get('files', [])
+                input_files = [f.get('path') for f in files_data if f.get('path')]
+                logger.info(f"Files format - files_data count: {len(files_data)}, input_files count: {len(input_files)}")
+                logger.info(f"Files data: {files_data}")
+            
+            # 3. 检查input_files格式（旧格式）
+            else:
+                input_files = config.get('input_files', [])
+                files_data = [{'path': f} for f in input_files]
+                logger.info(f"Input files format - input_files count: {len(input_files)}")
+            
+            logger.info(f"Final input_files count: {len(input_files)}")
             if len(input_files) < 2:
-                raise ValueError("Need at least 2 files for video merge")
+                raise ValueError(f"Video merge requires at least 2 input files, got {len(input_files)}")
             
             # 验证所有输入文件存在
             for file_path in input_files:

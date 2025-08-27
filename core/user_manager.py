@@ -5,10 +5,12 @@
 import os
 import sys
 import logging
+import hashlib
+import secrets
 from typing import Optional, Dict, List
 from datetime import datetime, timedelta
 
-# 确保可以导入 models 模块
+# 确保可以导入 models 模块 - 使用相对于backend-repo根目录的路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.user import User
@@ -21,6 +23,8 @@ class UserManager:
     def __init__(self, storage_manager):
         self.storage = storage_manager
         self.users_file = "users.json"
+        self.auth_users_file = "auth_users.json"  # 存储认证用户信息
+        self.user_sessions_file = "user_sessions.json"  # 存储用户会话关联
     
     def _load_users(self) -> Dict:
         """加载用户数据"""
@@ -223,3 +227,209 @@ class UserManager:
                 "active_users": 0,
                 "inactive_users": 0
             }
+    
+    def _load_auth_users(self) -> Dict:
+        """加载认证用户数据"""
+        auth_file_path = os.path.join(self.storage.data_dir, self.auth_users_file)
+        return self.storage._load_json(auth_file_path, {"auth_users": {}})
+    
+    def _save_auth_users(self, auth_data: Dict):
+        """保存认证用户数据"""
+        auth_file_path = os.path.join(self.storage.data_dir, self.auth_users_file)
+        self.storage._save_json(auth_file_path, auth_data)
+    
+    def _load_user_sessions(self) -> Dict:
+        """加载用户会话关联数据"""
+        sessions_file_path = os.path.join(self.storage.data_dir, self.user_sessions_file)
+        return self.storage._load_json(sessions_file_path, {"user_sessions": {}, "session_users": {}})
+    
+    def _save_user_sessions(self, sessions_data: Dict):
+        """保存用户会话关联数据"""
+        sessions_file_path = os.path.join(self.storage.data_dir, self.user_sessions_file)
+        self.storage._save_json(sessions_file_path, sessions_data)
+    
+    def _hash_password(self, password: str, salt: str = None) -> tuple:
+        """哈希密码"""
+        if salt is None:
+            salt = secrets.token_hex(16)
+        
+        # 使用 PBKDF2 进行密码哈希
+        password_hash = hashlib.pbkdf2_hmac('sha256', 
+                                          password.encode('utf-8'), 
+                                          salt.encode('utf-8'), 
+                                          100000)  # 100,000 iterations
+        return password_hash.hex(), salt
+    
+    def register_user(self, username: str, password: str, email: str = None) -> Dict:
+        """注册新用户"""
+        try:
+            auth_data = self._load_auth_users()
+            
+            # 检查用户名是否已存在
+            if username in auth_data["auth_users"]:
+                return {
+                    "success": False,
+                    "message": "用户名已存在"
+                }
+            
+            # 检查邮箱是否已存在
+            if email:
+                for user_info in auth_data["auth_users"].values():
+                    if user_info.get("email") == email:
+                        return {
+                            "success": False,
+                            "message": "邮箱已被使用"
+                        }
+            
+            # 哈希密码
+            password_hash, salt = self._hash_password(password)
+            
+            # 生成用户ID
+            user_id = f"user_{secrets.token_hex(8)}"
+            
+            # 保存认证信息
+            auth_data["auth_users"][username] = {
+                "user_id": user_id,
+                "username": username,
+                "password_hash": password_hash,
+                "salt": salt,
+                "email": email,
+                "created_at": datetime.utcnow().isoformat(),
+                "is_active": True
+            }
+            
+            self._save_auth_users(auth_data)
+            
+            # 创建用户数据记录
+            self.get_or_create_user(user_id)
+            
+            logger.info(f"User registered successfully: {username} (ID: {user_id})")
+            
+            return {
+                "success": True,
+                "message": "用户注册成功",
+                "user_id": user_id
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to register user {username}: {e}")
+            return {
+                "success": False,
+                "message": "注册失败，请稍后重试"
+            }
+    
+    def authenticate_user(self, username: str, password: str) -> Dict:
+        """验证用户登录"""
+        try:
+            auth_data = self._load_auth_users()
+            
+            # 检查用户是否存在
+            if username not in auth_data["auth_users"]:
+                return {
+                    "success": False,
+                    "message": "用户名或密码错误"
+                }
+            
+            user_info = auth_data["auth_users"][username]
+            
+            # 检查用户是否激活
+            if not user_info.get("is_active", True):
+                return {
+                    "success": False,
+                    "message": "账户已被禁用"
+                }
+            
+            # 验证密码
+            stored_hash = user_info["password_hash"]
+            salt = user_info["salt"]
+            password_hash, _ = self._hash_password(password, salt)
+            
+            if password_hash != stored_hash:
+                return {
+                    "success": False,
+                    "message": "用户名或密码错误"
+                }
+            
+            # 更新最后登录时间
+            user_info["last_login"] = datetime.utcnow().isoformat()
+            auth_data["auth_users"][username] = user_info
+            self._save_auth_users(auth_data)
+            
+            # 返回用户信息（不包含敏感信息）
+            safe_user_info = {
+                "user_id": user_info["user_id"],
+                "username": user_info["username"],
+                "email": user_info.get("email"),
+                "created_at": user_info["created_at"],
+                "last_login": user_info.get("last_login")
+            }
+            
+            return {
+                "success": True,
+                "message": "登录成功",
+                "user": safe_user_info
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to authenticate user {username}: {e}")
+            return {
+                "success": False,
+                "message": "登录失败，请稍后重试"
+            }
+    
+    def associate_user_session(self, user_id: str, session_id: str):
+        """关联用户和会话"""
+        try:
+            sessions_data = self._load_user_sessions()
+            
+            # 双向关联
+            sessions_data["user_sessions"][user_id] = session_id
+            sessions_data["session_users"][session_id] = user_id
+            
+            self._save_user_sessions(sessions_data)
+            
+            logger.info(f"Associated user {user_id} with session {session_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to associate user {user_id} with session {session_id}: {e}")
+            raise
+    
+    def disassociate_user_session(self, session_id: str):
+        """解除用户会话关联"""
+        try:
+            sessions_data = self._load_user_sessions()
+            
+            # 获取用户ID
+            user_id = sessions_data["session_users"].get(session_id)
+            
+            if user_id:
+                # 移除双向关联
+                sessions_data["user_sessions"].pop(user_id, None)
+                sessions_data["session_users"].pop(session_id, None)
+                
+                self._save_user_sessions(sessions_data)
+                
+                logger.info(f"Disassociated user {user_id} from session {session_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to disassociate session {session_id}: {e}")
+    
+    def get_user_by_session(self, session_id: str) -> Optional[str]:
+        """通过会话ID获取用户ID"""
+        try:
+            sessions_data = self._load_user_sessions()
+            return sessions_data["session_users"].get(session_id)
+            
+        except Exception as e:
+            logger.error(f"Failed to get user by session {session_id}: {e}")
+            return None
+    
+    def get_session_by_user(self, user_id: str) -> Optional[str]:
+        """通过用户ID获取会话ID"""
+        try:
+            sessions_data = self._load_user_sessions()
+            return sessions_data["user_sessions"].get(user_id)
+            
+        except Exception as e:
+            logger.error(f"Failed to get session by user {user_id}: {e}")
+            return None
