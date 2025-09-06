@@ -289,7 +289,10 @@ def submit_task():
     try:
         sid = getattr(g, 'sid', None)
         if not sid:
+            logger.warning(f"Task submission attempt without valid session from IP: {request.remote_addr}")
             return jsonify({'error': 'No valid session'}), 401
+        
+        logger.info(f"[TASK_SUBMIT] Task submission started - session_id: {sid}, IP: {request.remote_addr}")
         
         # 检查是否可以接受新任务
         from flask import current_app
@@ -304,10 +307,14 @@ def submit_task():
         # 获取任务类型
         task_type = request.form.get('task_type')
         if not task_type:
+            logger.warning(f"[TASK_SUBMIT] Missing task_type - session_id: {sid}, IP: {request.remote_addr}")
             return jsonify({'error': 'Missing task_type'}), 400
         
         if task_type not in ['watermark_removal', 'video_merge']:
+            logger.warning(f"[TASK_SUBMIT] Invalid task_type: {task_type} - session_id: {sid}, IP: {request.remote_addr}")
             return jsonify({'error': 'Invalid task_type'}), 400
+        
+        logger.info(f"[TASK_SUBMIT] Task type: {task_type} - session_id: {sid}, IP: {request.remote_addr}")
         
         # 处理文件上传
         if 'file' not in request.files and 'files' not in request.files:
@@ -376,8 +383,8 @@ def submit_task():
         # 提交任务
         task_id = current_app.task_queue_manager.submit_task(task_data)
         
-        logger.info(f"Task submitted successfully: {task_id}")
-        logger.info(f"Task data: {task_data}")
+        logger.info(f"[TASK_SUBMIT] Task submitted successfully - task_id: {task_id}, task_type: {task_type}, session_id: {sid}, IP: {request.remote_addr}")
+        logger.info(f"[TASK_SUBMIT] Task data - original_filename: {task_data.get('original_filename')}, file_size: {task_data.get('file_size')}, session_id: {sid}")
         
         return jsonify({
             'task_id': task_id,
@@ -386,7 +393,7 @@ def submit_task():
         })
         
     except Exception as e:
-        logger.error(f"Failed to submit task: {e}")
+        logger.error(f"[TASK_SUBMIT] Task submission failed - session_id: {sid if 'sid' in locals() else 'unknown'}, error: {e}, IP: {request.remote_addr}")
         return jsonify({
             'error': 'Task submission failed',
             'message': str(e)
@@ -450,17 +457,22 @@ def get_task_status(task_id):
     try:
         sid = getattr(g, 'sid', None)
         if not sid:
+            logger.warning(f"Task status request without valid session - task_id: {task_id}, IP: {request.remote_addr}")
             return jsonify({'error': 'No valid session'}), 401
+        
+        logger.debug(f"[TASK_STATUS] Status request - task_id: {task_id}, session_id: {sid}, IP: {request.remote_addr}")
         
         # 获取任务
         from flask import current_app
         task = current_app.storage_manager.get_task(task_id)
         
         if not task:
+            logger.warning(f"[TASK_STATUS] Task not found - task_id: {task_id}, session_id: {sid}, IP: {request.remote_addr}")
             return jsonify({'error': 'Task not found'}), 404
         
         # 验证任务所有权
         if task.get('sid') != sid:
+            logger.warning(f"[TASK_STATUS] Access denied - task_id: {task_id}, task_owner: {task.get('sid')}, requester: {sid}, IP: {request.remote_addr}")
             return jsonify({'error': 'Access denied'}), 403
         
         # 返回任务状态 - 使用统一响应格式

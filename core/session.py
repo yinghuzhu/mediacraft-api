@@ -43,7 +43,7 @@ class SessionManager:
             self.storage.get_user_upload_dir(sid)
             self.storage.get_user_result_dir(sid)
             
-            logger.info(f"Created new session: {sid}")
+            logger.info(f"[SESSION_CREATE] Created new session - session_id: {sid}, IP: {session_data.get('ip_address')}, User-Agent: {session_data.get('user_agent')[:50]}...")
             return sid
             
         except Exception as e:
@@ -67,7 +67,7 @@ class SessionManager:
                 try:
                     last_accessed = datetime.fromisoformat(last_accessed_str)
                     if datetime.utcnow() - last_accessed > self.session_timeout:
-                        logger.info(f"Session expired: {sid}")
+                        logger.info(f"[SESSION_VALIDATE] Session expired - session_id: {sid}, last_accessed: {last_accessed_str}")
                         self.deactivate_session(sid)
                         return False
                 except ValueError:

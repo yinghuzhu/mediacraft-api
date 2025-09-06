@@ -30,9 +30,15 @@ class WatermarkProcessor:
         import subprocess
         import tempfile
         
+        task_id = task.get('task_id', 'unknown')
+        sid = task.get('sid', 'unknown')
+        
+        logger.info(f"[WATERMARK_PROCESS] Starting watermark removal - task_id: {task_id}, session_id: {sid}")
+        
         try:
             input_path = task.get('input_file_path')
             if not input_path or not os.path.exists(input_path):
+                logger.error(f"[WATERMARK_PROCESS] Input file not found - task_id: {task_id}, session_id: {sid}, path: {input_path}")
                 raise ValueError("Input file not found")
             
             # 获取任务配置
@@ -40,7 +46,10 @@ class WatermarkProcessor:
             regions = config.get('regions', [])
             
             if not regions:
+                logger.error(f"[WATERMARK_PROCESS] No watermark regions specified - task_id: {task_id}, session_id: {sid}")
                 raise ValueError("No watermark regions specified")
+            
+            logger.info(f"[WATERMARK_PROCESS] Processing {len(regions)} watermark regions - task_id: {task_id}, session_id: {sid}")
             
             # 准备输出路径
             sid = task.get('sid')
@@ -70,15 +79,16 @@ class WatermarkProcessor:
             
             # 验证输出文件
             if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+                logger.error(f"[WATERMARK_PROCESS] Output file creation failed - task_id: {task_id}, session_id: {sid}, output_path: {output_path}")
                 raise ValueError("Output file creation failed")
             
             progress_callback(100, "水印去除完成")
-            logger.info(f"Watermark removal completed: {output_path}")
+            logger.info(f"[WATERMARK_PROCESS] Watermark removal completed successfully - task_id: {task_id}, session_id: {sid}, output_path: {output_path}")
             
             return output_path
             
         except Exception as e:
-            logger.error(f"Watermark removal failed: {e}")
+            logger.error(f"[WATERMARK_PROCESS] Watermark removal failed - task_id: {task_id}, session_id: {sid}, error: {e}")
             # 清理可能的临时和输出文件
             for path in [locals().get('temp_video_path'), locals().get('output_path')]:
                 if path and os.path.exists(path):

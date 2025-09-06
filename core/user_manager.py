@@ -303,7 +303,7 @@ class UserManager:
             # 创建用户数据记录
             self.get_or_create_user(user_id)
             
-            logger.info(f"User registered successfully: {username} (ID: {user_id})")
+            logger.info(f"[USER_MANAGER] User registered successfully - username: {username}, user_id: {user_id}")
             
             return {
                 "success": True,
@@ -388,7 +388,7 @@ class UserManager:
             
             self._save_user_sessions(sessions_data)
             
-            logger.info(f"Associated user {user_id} with session {session_id}")
+            logger.info(f"[USER_MANAGER] Associated user with session - user_id: {user_id}, session_id: {session_id}")
             
         except Exception as e:
             logger.error(f"Failed to associate user {user_id} with session {session_id}: {e}")
@@ -409,7 +409,7 @@ class UserManager:
                 
                 self._save_user_sessions(sessions_data)
                 
-                logger.info(f"Disassociated user {user_id} from session {session_id}")
+                logger.info(f"[USER_MANAGER] Disassociated user from session - user_id: {user_id}, session_id: {session_id}")
             
         except Exception as e:
             logger.error(f"Failed to disassociate session {session_id}: {e}")
