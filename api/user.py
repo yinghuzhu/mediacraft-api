@@ -115,30 +115,23 @@ def login():
         
         user_info = auth_result['user']
         
-        # 创建或获取会话
+        # 获取当前会话ID（由中间件创建）
         session_id = getattr(g, 'sid', None)
         if not session_id:
-            # 创建新会话
-            session_result = session_manager.create_session()
-            if not session_result['success']:
-                return jsonify(get_standard_response(
-                    success=False,
-                    code=500,
-                    message="创建会话失败"
-                )), 500
-            session_id = session_result['session_id']
+            return jsonify(get_standard_response(
+                success=False,
+                code=500,
+                message="会话创建失败"
+            )), 500
         
         # 关联用户和会话
         user_manager.associate_user_session(user_info['user_id'], session_id)
         
-        # 设置会话cookie
-        response = jsonify(get_standard_response(
+        # 返回登录成功响应（Cookie由中间件自动设置）
+        return jsonify(get_standard_response(
             message="登录成功",
             data={"user": user_info}
         ))
-        response.set_cookie('session_id', session_id, httponly=True, secure=False)
-        
-        return response
         
     except Exception as e:
         logger.error(f"Failed to login user: {e}")
@@ -172,7 +165,17 @@ def logout():
         response = jsonify(get_standard_response(
             message="登出成功"
         ))
-        response.set_cookie('session_id', '', expires=0)
+        # 清除cookie时也要考虑domain兼容性
+        response.set_cookie(
+            'session_id', 
+            '', 
+            path='/',  # 确保path匹配
+            domain=None,  # 不设置domain，确保兼容性
+            expires=0,
+            httponly=True,
+            secure=False,
+            samesite='Lax'
+        )
         
         return response
         

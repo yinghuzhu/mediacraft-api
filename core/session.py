@@ -222,18 +222,48 @@ def create_session_middleware(session_manager: SessionManager):
         
         @app.after_request
         def after_request(response):
-            from flask import g
+            from flask import g, request
             
-            # 设置会话Cookie
+            # 只在以下情况设置会话Cookie：
+            # 1. 新创建的会话（没有现有cookie或cookie无效）
+            # 2. 登录成功后
+            # 3. 会话初始化请求
+            should_set_cookie = False
+            
             if hasattr(g, 'sid') and g.sid:
-                response.set_cookie(
-                    'session_id', 
-                    g.sid,
-                    max_age=30 * 24 * 60 * 60,  # 30天
-                    httponly=True,
-                    secure=False,  # 开发环境设为False，生产环境应为True
-                    samesite='Lax'
-                )
+                existing_sid = request.cookies.get('session_id')
+                
+                # 如果没有现有cookie，或者现有cookie与当前会话不匹配，则设置新cookie
+                if not existing_sid or existing_sid != g.sid:
+                    should_set_cookie = True
+                
+                # 如果是登录请求成功，也设置cookie
+                if request.endpoint == 'user.login' and response.status_code == 200:
+                    should_set_cookie = True
+                
+                # 如果是会话初始化请求，也设置cookie
+                if request.path == '/api/session/init':
+                    should_set_cookie = True
+                
+                if should_set_cookie:
+                    # 获取请求的host，处理localhost和127.0.0.1的兼容性
+                    host = request.headers.get('Host', 'localhost:50001')
+                    domain = None
+                    
+                    # 如果是localhost或127.0.0.1，不设置domain让cookie在两者间共享
+                    if 'localhost' in host or '127.0.0.1' in host:
+                        domain = None  # 不设置domain，使用默认行为
+                    
+                    response.set_cookie(
+                        'session_id', 
+                        g.sid,
+                        path='/',  # 明确设置为根路径
+                        domain=domain,  # 动态设置domain
+                        max_age=30 * 24 * 60 * 60,  # 30天
+                        httponly=True,
+                        secure=False,  # 开发环境设为False，生产环境应为True
+                        samesite='Lax'
+                    )
             
             return response
     

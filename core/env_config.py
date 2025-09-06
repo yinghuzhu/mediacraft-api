@@ -151,7 +151,11 @@ class EnhancedConfig:
         self.ALLOWED_EXTENSIONS = {'.mp4', '.avi', '.mov', '.mkv'}
         
         # CORS配置
-        cors_origins = self.env_loader.get_list('CORS_ORIGINS', ['http://localhost:3000', 'http://127.0.0.1:3000'])
+        cors_origins = self.env_loader.get_list('CORS_ORIGINS', [
+            'http://localhost:3000', 
+            'http://127.0.0.1:3000',
+            'http://mediacraft.yzhu.name'
+        ])
         self.CORS_ORIGINS = cors_origins
         self.ENABLE_CORS = self.env_loader.get_bool('ENABLE_CORS', True)
         
