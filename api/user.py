@@ -6,6 +6,8 @@ from flask import Blueprint, request, jsonify, g, current_app
 import logging
 from core.utils import get_client_ip
 
+logger = logging.getLogger(__name__)
+
 user_bp = Blueprint('user', __name__)
 
 def get_standard_response(success=True, code=200, message="Success", data=None):

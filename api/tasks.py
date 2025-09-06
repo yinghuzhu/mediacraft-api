@@ -9,6 +9,8 @@ import logging
 from datetime import datetime
 from core.utils import get_client_ip
 
+logger = logging.getLogger(__name__)
+
 tasks_bp = Blueprint('tasks', __name__)
 
 @tasks_bp.route('/create', methods=['POST'])
