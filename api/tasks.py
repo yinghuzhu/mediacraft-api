@@ -677,7 +677,11 @@ def update_task(task_id):
         else:
             logger.warning(f"No frame data available for task {task_id}")
             
-        logger.info(f"Response data: {response_data}")
+        # 记录响应数据（排除敏感的frame_data）
+        log_response_data = {k: v for k, v in response_data.items() if k != 'frame_data'}
+        if 'frame_data' in response_data:
+            log_response_data['frame_data'] = f"<base64_data_length:{len(response_data['frame_data'])}>" 
+        logger.info(f"Response data: {log_response_data}")
         return jsonify(response_data)
         
     except Exception as e:
