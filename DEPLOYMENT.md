@@ -27,7 +27,7 @@ su - yhzhu
 
 ```bash
 # 克隆代码
-git clone https://github.com/your-username/mediacraft.git
+git clone https://github.com/yinghuzhu/mediacraft-api.git
 cd mediacraft
 
 # 执行部署脚本

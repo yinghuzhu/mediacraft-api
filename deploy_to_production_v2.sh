@@ -5,10 +5,11 @@
 set -e
 
 VERSION="2.7.0"
-PROJECT_NAME="mediacraft"
+PROJECT_NAME="mediacraft-api"
 DEPLOY_USER="yhzhu"
 DEPLOY_PATH="/home/${DEPLOY_USER}/${PROJECT_NAME}"
-BACKUP_DIR="/tmp/${PROJECT_NAME}_backup_$(date +%Y%m%d_%H%M%S)"
+# BACKUP_DIR="/tmp/${PROJECT_NAME}_backup_$(date +%Y%m%d_%H%M%S)"
+DATA_DIR=/data/mediacraft
 
 echo "🚀 MediaCraft v${VERSION} 生产环境部署"
 echo "========================================"
@@ -51,14 +52,14 @@ if pgrep -f "python.*app.py" > /dev/null; then
     print_warning "检测到正在运行的 MediaCraft 服务"
     
     # 创建备份
-    echo "📦 创建数据备份..."
-    mkdir -p "$BACKUP_DIR"
-    if [ -d "$DEPLOY_PATH" ]; then
-        # 只备份重要数据
-        cp -r "$DEPLOY_PATH/data" "$BACKUP_DIR/" 2>/dev/null || true
-        cp "$DEPLOY_PATH/.env.production" "$BACKUP_DIR/" 2>/dev/null || true
-        print_success "数据备份已创建: $BACKUP_DIR"
-    fi
+    # echo "📦 创建数据备份..."
+    # mkdir -p "$BACKUP_DIR"
+    # if [ -d "$DEPLOY_PATH" ]; then
+    #     # 只备份重要数据
+    #     cp -r "$DEPLOY_PATH/data" "$BACKUP_DIR/" 2>/dev/null || true
+    #     cp "$DEPLOY_PATH/.env.production" "$BACKUP_DIR/" 2>/dev/null || true
+    #     print_success "数据备份已创建: $BACKUP_DIR"
+    # fi
     
     # 优雅停止服务
     echo "🛑 停止现有服务..."
@@ -84,7 +85,7 @@ if [ -d "$DEPLOY_PATH" ]; then
 else
     # 首次克隆
     echo "📥 克隆代码仓库..."
-    git clone https://github.com/your-username/mediacraft.git "$DEPLOY_PATH"
+    git clone https://github.com/yinghuzhu/mediacraft-api.git "$DEPLOY_PATH"
     cd "$DEPLOY_PATH"
 fi
 
@@ -109,12 +110,12 @@ pip install -r requirements.txt
 print_success "依赖安装完成"
 
 # 恢复数据和配置
-if [ -d "$BACKUP_DIR" ]; then
-    echo "🔄 恢复数据和配置..."
-    cp -r "$BACKUP_DIR/data" . 2>/dev/null || true
-    cp "$BACKUP_DIR/.env.production" . 2>/dev/null || true
-    print_success "数据恢复完成"
-fi
+# if [ -d "$BACKUP_DIR" ]; then
+#     echo "🔄 恢复数据和配置..."
+#     cp -r "$BACKUP_DIR/data" . 2>/dev/null || true
+#     cp "$BACKUP_DIR/.env.production" . 2>/dev/null || true
+#     print_success "数据恢复完成"
+# fi
 
 # 检查生产环境配置
 if [ ! -f ".env.production" ]; then
@@ -124,21 +125,21 @@ if [ ! -f ".env.production" ]; then
 fi
 
 # 设置权限
-echo "🔐 设置文件权限..."
-chmod +x *.sh
-chmod 600 .env.*
-mkdir -p data/{uploads,results,temp,logs}
-chmod 755 data/
-chmod 777 data/{uploads,results,temp,logs}
+# echo "🔐 设置文件权限..."
+# chmod +x *.sh
+# chmod 600 .env.*
+# mkdir -p data/{uploads,results,temp,logs}
+# chmod 755 data/
+# chmod 777 data/{uploads,results,temp,logs}
 
-print_success "权限设置完成"
+# print_success "权限设置完成"
 
-# 运行数据库迁移/初始化（如果需要）
-echo "🗄️  初始化数据存储..."
-mkdir -p data/{uploads,results,temp,logs}
-touch data/tasks.json 2>/dev/null || true
-touch data/users.json 2>/dev/null || true
-touch data/sessions.json 2>/dev/null || true
+# # 运行数据库迁移/初始化（如果需要）
+# echo "🗄️  初始化数据存储..."
+# mkdir -p data/{uploads,results,temp,logs}
+# touch data/tasks.json 2>/dev/null || true
+# touch data/users.json 2>/dev/null || true
+# touch data/sessions.json 2>/dev/null || true
 
 # 启动服务
 echo "🚀 启动 MediaCraft 服务..."
