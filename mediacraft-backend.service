@@ -1,0 +1,29 @@
+[Unit]
+Description=MediaCraft Video Processing API Server
+Documentation=https://github.com/your-username/mediacraft
+After=network.target
+
+[Service]
+Type=simple
+User=yhzhu
+Group=yhzhu
+WorkingDirectory=/home/yhzhu/mediacraft
+Environment=PATH=/home/yhzhu/mediacraft/venv/bin
+Environment=FLASK_ENV=production
+ExecStart=/home/yhzhu/mediacraft/venv/bin/python app.py
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/yhzhu/mediacraft/data/logs/app.log
+StandardError=append:/home/yhzhu/mediacraft/data/logs/error.log
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+
+# 资源限制
+LimitNOFILE=1048576
+LimitNPROC=1048576
+
+[Install]
+WantedBy=multi-user.target
