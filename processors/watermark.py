@@ -34,6 +34,8 @@ class WatermarkProcessor:
         sid = task.get('sid', 'unknown')
         
         logger.info(f"[WATERMARK_PROCESS] Starting watermark removal - task_id: {task_id}, session_id: {sid}")
+        logger.info(f"[WATERMARK_PROCESS] Task keys: {list(task.keys())}")
+        logger.info(f"[WATERMARK_PROCESS] Full task: {task}")
         
         try:
             input_path = task.get('input_file_path')
@@ -45,9 +47,13 @@ class WatermarkProcessor:
             config = task.get('task_config', {})
             regions = config.get('regions', [])
             
+            logger.info(f"[WATERMARK_PROCESS] Task config: {config}")
+            logger.info(f"[WATERMARK_PROCESS] Found {len(regions)} regions: {regions}")
+            
             if not regions:
                 logger.error(f"[WATERMARK_PROCESS] No watermark regions specified - task_id: {task_id}, session_id: {sid}")
-                raise ValueError("No watermark regions specified")
+                logger.error(f"[WATERMARK_PROCESS] Available task_config keys: {list(config.keys())}")
+                raise ValueError("No watermark regions specified in task configuration")
             
             logger.info(f"[WATERMARK_PROCESS] Processing {len(regions)} watermark regions - task_id: {task_id}, session_id: {sid}")
             
