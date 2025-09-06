@@ -270,10 +270,20 @@ class TaskQueueManager:
         """验证任务配置"""
         task_type = task.get("task_type")
         task_config = task.get("task_config", {})
+        task_id = task.get("task_id", "unknown")
+        
+        logger.info(f"[TASK_VALIDATION] Validating task {task_id} of type {task_type}")
+        logger.info(f"[TASK_VALIDATION] Task config keys: {list(task_config.keys())}")
+        logger.info(f"[TASK_VALIDATION] Full task_config: {task_config}")
         
         if task_type == "watermark_removal":
             regions = task_config.get("regions", [])
+            logger.info(f"[TASK_VALIDATION] Found {len(regions)} regions in task_config")
+            
             if not regions:
+                # 记录更多调试信息
+                logger.error(f"[TASK_VALIDATION] No regions found - task_id: {task_id}")
+                logger.error(f"[TASK_VALIDATION] Complete task data: {task}")
                 raise ValueError("No watermark regions specified in task configuration")
             
             # 验证区域格式
