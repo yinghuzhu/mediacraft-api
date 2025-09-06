@@ -634,21 +634,11 @@ def update_task(task_id):
                 # 更新任务状态为queued，让任务队列处理
                 task['status'] = 'queued'
                 
-                # 准备任务数据用于队列处理
-                queue_task_data = {
-                    'task_id': task_id,  # 使用现有的task_id
-                    'sid': task.get('sid'),
-                    'task_type': task.get('task_type'),
-                    'original_filename': task.get('original_filename'),
-                    'input_file_path': task.get('input_file_path'),
-                    'file_size': task.get('file_size'),
-                    'task_config': task.get('task_config', {}),
-                    'status': 'queued',
-                    'created_at': task.get('created_at'),
-                    'progress_percentage': 0
-                }
+                # 先保存任务（非常重要！必须在队列处理之前）
+                current_app.storage_manager.save_task(task_id, task)
+                logger.info(f"Task {task_id} saved with regions before queuing")
                 
-                # 直接将任务添加到队列，不生成新ID
+                # 然后才将任务添加到队列
                 with current_app.task_queue_manager._task_lock:
                     if len(current_app.task_queue_manager.active_tasks) < current_app.task_queue_manager.max_concurrent:
                         current_app.task_queue_manager._start_task_immediately(task_id)
@@ -657,9 +647,12 @@ def update_task(task_id):
                         logger.info(f"Task {task_id} added to queue for processing")
                 
                 logger.info(f"Task {task_id} queued for processing with regions")
-        
-        # 保存任务
-        current_app.storage_manager.save_task(task_id, task)
+            else:
+                # 如果不是开始处理，也要保存任务
+                current_app.storage_manager.save_task(task_id, task)
+        else:
+            # 如果没有regions更新，也要保存其他更新
+            current_app.storage_manager.save_task(task_id, task)
         
         response_data = {
             'success': True,
