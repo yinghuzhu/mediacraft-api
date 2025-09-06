@@ -4,8 +4,7 @@
 """
 from flask import Blueprint, request, jsonify, g, current_app
 import logging
-
-logger = logging.getLogger(__name__)
+from core.utils import get_client_ip
 
 user_bp = Blueprint('user', __name__)
 
@@ -33,7 +32,7 @@ def register():
         data = request.get_json()
         
         if not data:
-            logger.warning(f"Registration attempt with empty data from IP: {request.remote_addr}")
+            logger.warning(f"Registration attempt with empty data from IP: {get_client_ip(request)}")
             return jsonify(get_standard_response(
                 success=False,
                 code=400,
@@ -45,14 +44,14 @@ def register():
         email = data.get('email')
         
         if not username or not password:
-            logger.warning(f"Registration attempt with missing credentials - username: {username}, from IP: {request.remote_addr}")
+            logger.warning(f"Registration attempt with missing credentials - username: {username}, from IP: {get_client_ip(request)}")
             return jsonify(get_standard_response(
                 success=False,
                 code=400,
                 message="用户名和密码不能为空"
             )), 400
         
-        logger.info(f"[USER_REGISTER] Starting registration for username: {username}, email: {email}, IP: {request.remote_addr}")
+        logger.info(f"[USER_REGISTER] Starting registration for username: {username}, email: {email}, IP: {get_client_ip(request)}")
         
         # 获取用户管理器
         user_manager = current_app.user_manager
@@ -61,13 +60,13 @@ def register():
         result = user_manager.register_user(username, password, email)
         
         if result['success']:
-            logger.info(f"[USER_REGISTER] Registration successful - username: {username}, user_id: {result['user_id']}, IP: {request.remote_addr}")
+            logger.info(f"[USER_REGISTER] Registration successful - username: {username}, user_id: {result['user_id']}, IP: {get_client_ip(request)}")
             return jsonify(get_standard_response(
                 message="用户注册成功",
                 data={"user_id": result['user_id']}
             ))
         else:
-            logger.warning(f"[USER_REGISTER] Registration failed - username: {username}, reason: {result['message']}, IP: {request.remote_addr}")
+            logger.warning(f"[USER_REGISTER] Registration failed - username: {username}, reason: {result['message']}, IP: {get_client_ip(request)}")
             return jsonify(get_standard_response(
                 success=False,
                 code=400,
@@ -75,7 +74,7 @@ def register():
             )), 400
         
     except Exception as e:
-        logger.error(f"[USER_REGISTER] Registration error - username: {data.get('username', 'unknown') if 'data' in locals() else 'unknown'}, error: {e}, IP: {request.remote_addr}")
+        logger.error(f"[USER_REGISTER] Registration error - username: {data.get('username', 'unknown') if 'data' in locals() else 'unknown'}, error: {e}, IP: {get_client_ip(request)}")
         return jsonify(get_standard_response(
             success=False,
             code=500,
@@ -89,7 +88,7 @@ def login():
         data = request.get_json()
         
         if not data:
-            logger.warning(f"Login attempt with empty data from IP: {request.remote_addr}")
+            logger.warning(f"Login attempt with empty data from IP: {get_client_ip(request)}")
             return jsonify(get_standard_response(
                 success=False,
                 code=400,
@@ -100,14 +99,14 @@ def login():
         password = data.get('password')
         
         if not username or not password:
-            logger.warning(f"Login attempt with missing credentials - username: {username}, from IP: {request.remote_addr}")
+            logger.warning(f"Login attempt with missing credentials - username: {username}, from IP: {get_client_ip(request)}")
             return jsonify(get_standard_response(
                 success=False,
                 code=400,
                 message="用户名和密码不能为空"
             )), 400
         
-        logger.info(f"[USER_LOGIN] Login attempt - username: {username}, IP: {request.remote_addr}")
+        logger.info(f"[USER_LOGIN] Login attempt - username: {username}, IP: {get_client_ip(request)}")
         
         # 获取用户管理器和会话管理器
         user_manager = current_app.user_manager
@@ -117,7 +116,7 @@ def login():
         auth_result = user_manager.authenticate_user(username, password)
         
         if not auth_result['success']:
-            logger.warning(f"[USER_LOGIN] Authentication failed - username: {username}, reason: {auth_result['message']}, IP: {request.remote_addr}")
+            logger.warning(f"[USER_LOGIN] Authentication failed - username: {username}, reason: {auth_result['message']}, IP: {get_client_ip(request)}")
             return jsonify(get_standard_response(
                 success=False,
                 code=401,
@@ -130,7 +129,7 @@ def login():
         # 获取当前会话ID（由中间件创建）
         session_id = getattr(g, 'sid', None)
         if not session_id:
-            logger.error(f"[USER_LOGIN] Session creation failed - username: {username}, user_id: {user_id}, IP: {request.remote_addr}")
+            logger.error(f"[USER_LOGIN] Session creation failed - username: {username}, user_id: {user_id}, IP: {get_client_ip(request)}")
             return jsonify(get_standard_response(
                 success=False,
                 code=500,
@@ -140,7 +139,7 @@ def login():
         # 关联用户和会话
         user_manager.associate_user_session(user_id, session_id)
         
-        logger.info(f"[USER_LOGIN] Login successful - username: {username}, user_id: {user_id}, session_id: {session_id}, IP: {request.remote_addr}")
+        logger.info(f"[USER_LOGIN] Login successful - username: {username}, user_id: {user_id}, session_id: {session_id}, IP: {get_client_ip(request)}")
         
         # 返回登录成功响应（Cookie由中间件自动设置）
         return jsonify(get_standard_response(
@@ -149,7 +148,7 @@ def login():
         ))
         
     except Exception as e:
-        logger.error(f"[USER_LOGIN] Login error - username: {data.get('username', 'unknown') if 'data' in locals() else 'unknown'}, error: {e}, IP: {request.remote_addr}")
+        logger.error(f"[USER_LOGIN] Login error - username: {data.get('username', 'unknown') if 'data' in locals() else 'unknown'}, error: {e}, IP: {get_client_ip(request)}")
         return jsonify(get_standard_response(
             success=False,
             code=500,

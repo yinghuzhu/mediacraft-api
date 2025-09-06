@@ -7,6 +7,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict
 import logging
+from .utils import get_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class SessionManager:
                 "last_accessed": now,
                 "is_active": True,
                 "user_agent": user_agent or request.headers.get('User-Agent', ''),
-                "ip_address": ip_address or request.remote_addr or ''
+                "ip_address": ip_address or get_client_ip(request) or ''
             }
             
             # 保存会话数据
