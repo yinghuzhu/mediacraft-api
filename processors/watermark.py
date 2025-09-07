@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 from typing import Dict, Callable, Optional
 import logging
+from core.utils import check_ffmpeg_availability
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +162,14 @@ class WatermarkProcessor:
         import subprocess
         
         try:
+            # 检查FFmpeg是否可用
+            if not check_ffmpeg_availability():
+                logger.warning("FFmpeg not available, skipping audio merge")
+                # 直接复制处理后的视频
+                import shutil
+                shutil.copy2(video_path, output_path)
+                return
+            
             # 使用FFmpeg命令合并视频和音频
             cmd = [
                 'ffmpeg', '-y',  # -y 覆盖输出文件

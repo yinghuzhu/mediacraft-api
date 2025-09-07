@@ -5,8 +5,10 @@
 import os
 import cv2
 import numpy as np
+import subprocess
 from typing import Dict, Callable, List
 import logging
+from core.utils import ensure_ffmpeg_available
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +172,9 @@ class VideoMerger:
         """
         import subprocess
         import tempfile
+        
+        # 检查FFmpeg是否可用
+        ensure_ffmpeg_available()
         
         try:
             progress_callback(30, "准备处理视频片段...")

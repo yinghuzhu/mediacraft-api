@@ -11,8 +11,13 @@
 sudo apt update
 sudo apt install python3 python3-venv python3-pip git nginx ffmpeg
 
-# CentOS/RHEL
+# CentOS/RHEL 7
 sudo yum install python3 python3-venv python3-pip git nginx ffmpeg
+
+# RHEL 8+/Rocky Linux 9/AlmaLinux
+sudo dnf install python3 python3-venv python3-pip git nginx
+# For FFmpeg on Rocky Linux 9, use the dedicated script:
+./install_ffmpeg_rocky9.sh
 ```
 
 ### 2. 创建部署用户

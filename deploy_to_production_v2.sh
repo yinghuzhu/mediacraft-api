@@ -43,7 +43,31 @@ fi
 echo "🔍 检查系统依赖..."
 command -v python3 >/dev/null 2>&1 || { print_error "需要安装 Python 3"; exit 1; }
 command -v git >/dev/null 2>&1 || { print_error "需要安装 Git"; exit 1; }
-command -v ffmpeg >/dev/null 2>&1 || { print_warning "FFmpeg 未安装，视频处理功能可能受限"; }
+
+# 详细检查FFmpeg
+if command -v ffmpeg >/dev/null 2>&1; then
+    print_success "FFmpeg 已安装"
+else
+    print_error "FFmpeg 未安装！视频合并功能将无法使用"
+    echo ""
+    echo "安装FFmpeg:"
+    echo "Ubuntu/Debian: sudo apt update && sudo apt install ffmpeg"
+    echo "CentOS/RHEL 7: sudo yum install epel-release && sudo yum install ffmpeg"
+    echo "RHEL 8+/Rocky Linux/AlmaLinux:"
+    echo "  sudo dnf install epel-release -y"
+    echo "  sudo dnf config-manager --set-enabled crb"
+    echo "  sudo dnf install https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-9.noarch.rpm -y"
+    echo "  sudo dnf install ladspa ffmpeg ffmpeg-devel -y"
+    echo "macOS:         brew install ffmpeg"
+    echo ""
+    echo "🔍 For Rocky Linux 9 specific issues, see: issues/ROCKY_LINUX_FFMPEG_INSTALLATION.md"
+    echo ""
+    read -p "是否继续部署？(y/N): " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
 
 print_success "系统依赖检查完成"
 
@@ -144,7 +168,7 @@ fi
 # 启动服务
 echo "🚀 启动 MediaCraft 服务..."
 export FLASK_ENV=production
-nohup python3 app.py > data/logs/app.log 2>&1 &
+nohup python3 app.py > ${DATA_DIR}/logs/app.log 2>&1 &
 
 # 等待服务启动
 echo "⏳ 等待服务启动..."
@@ -172,6 +196,12 @@ done
 if [ -f "health_check.py" ]; then
     echo "🏥 运行系统清理..."
     python3 health_check.py
+fi
+
+# 运行FFmpeg检查
+if [ -f "check_ffmpeg.py" ]; then
+    echo "🎥 检查FFmpeg状态..."
+    python3 check_ffmpeg.py
 fi
 
 # 部署完成
