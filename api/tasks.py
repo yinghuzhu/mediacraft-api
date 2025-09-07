@@ -357,27 +357,51 @@ def submit_task():
         
         elif task_type == 'video_merge':
             files = request.files.getlist('files')
+            print(f"[DEBUG] Received {len(files)} files for video merge")
+            for i, file in enumerate(files):
+                print(f"[DEBUG] File {i}: {file.filename}, size: {file.content_length}")
+            
             if len(files) < 2:
+                print(f"[DEBUG] Error: Only {len(files)} files received, need at least 2")
                 return jsonify({'error': 'Need at least 2 files for video merge'}), 400
             
-            # 保存所有上传文件
+            # 保存所有上传文件并分析视频元数据
             upload_dir = current_app.storage_manager.get_user_upload_dir(sid)
-            file_paths = []
+            files_data = []
             total_size = 0
             
-            for file in files:
+            for i, file in enumerate(files):
                 filename = file.filename
                 file_path = os.path.join(upload_dir, filename)
                 file.save(file_path)
-                file_paths.append(file_path)
-                total_size += os.path.getsize(file_path)
+                file_size = os.path.getsize(file_path)
+                total_size += file_size
+                
+                # 分析视频信息
+                video_info = _analyze_video_file(file_path)
+                
+                # 创建文件元数据
+                file_metadata = {
+                    'filename': filename,
+                    'path': file_path,
+                    'size': file_size,
+                    'duration': video_info.get('duration', 0),
+                    'resolution': video_info.get('resolution', 'Unknown'),
+                    'fps': video_info.get('fps', 0),
+                    'has_audio': video_info.get('has_audio', False),
+                    'start_time': 0,  # 默认从开始
+                    'end_time': video_info.get('duration', 0)  # 默认到结尾
+                }
+                
+                files_data.append(file_metadata)
+                print(f"[DEBUG] Analyzed file {i+1}: {filename}, duration: {video_info.get('duration', 0):.2f}s, resolution: {video_info.get('resolution', 'Unknown')}")
             
             task_data.update({
                 'original_filename': f"{len(files)} files",
-                'input_file_path': file_paths[0],  # 主文件
+                'input_file_path': files_data[0]['path'],  # 主文件
                 'file_size': total_size,
                 'task_config': {
-                    'input_files': file_paths
+                    'files': files_data  # 使用标准的 'files' 字段名
                 }
             })
         

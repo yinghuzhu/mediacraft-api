@@ -302,7 +302,8 @@ class TaskQueueManager:
                         raise ValueError(f"Invalid '{key}' value in region {i}")
         
         elif task_type == "video_merge":
-            files = task_config.get("files", [])
+            # 支持两种字段名：files 和 input_files
+            files = task_config.get("files", []) or task_config.get("input_files", [])
             if len(files) < 2:
                 raise ValueError("Video merge requires at least 2 input files")
     
